@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { SYMPTOMS } from '@/utils/MockData';
+import { api } from '@/services/api';
+import type { Symptom } from '@/types/index';
 
 interface SymptomSelectorProps {
     selectedSymptoms: string[];
@@ -8,18 +9,30 @@ interface SymptomSelectorProps {
 }
 
 export function SymptomSelector({ selectedSymptoms, onSymptomToggle }: SymptomSelectorProps) {
+    const [symptoms, setSymptoms] = useState<Symptom[]>([]);
+    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<string>('all');
 
-    const categories = ['all', 'respiratory', 'digestive', 'general', 'other'];
+    useEffect(() => {
+        api.resources.getSymptoms()
+            .then(data => setSymptoms(data))
+            .catch(err => console.error("Failed to load symptoms", err))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const categories = ['all', 'respiratory', 'digestive', 'general'];
 
     const filteredSymptoms = filter === 'all'
-        ? SYMPTOMS
-        : SYMPTOMS.filter(s => s.category === filter);
+        ? symptoms
+        : symptoms.filter(s => s.category === filter);
 
     const getIcon = (iconName: string) => {
+        // Dynamic icon lookup from string name
         const Icon = (LucideIcons as any)[iconName] || LucideIcons.Circle;
         return Icon;
     };
+
+    if (loading) return <div className="text-center p-4">Loading symptoms...</div>;
 
     return (
         <div className="space-y-4">
@@ -28,12 +41,9 @@ export function SymptomSelector({ selectedSymptoms, onSymptomToggle }: SymptomSe
                     <button
                         key={cat}
                         onClick={() => setFilter(cat)}
-                        className={`px-4 py-2 rounded-full transition-all ${filter === cat
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
+                        className={`px-4 py-2 rounded-full text-sm capitalize transition-all ${filter === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
                     >
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        {cat}
                     </button>
                 ))}
             </div>
@@ -41,26 +51,20 @@ export function SymptomSelector({ selectedSymptoms, onSymptomToggle }: SymptomSe
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {filteredSymptoms.map(symptom => {
                     const Icon = getIcon(symptom.icon);
-                    const isSelected = selectedSymptoms.includes(symptom.id);
+                    // Handle case where symptom might use 'key' or 'id'
+                    const symptomKey = symptom.key || symptom.id;
+                    const isSelected = selectedSymptoms.includes(symptomKey);
 
                     return (
                         <button
                             key={symptom.id}
-                            onClick={() => onSymptomToggle(symptom.id)}
-                            className={`p-4 rounded-xl border-2 transition-all ${isSelected
-                                ? 'border-blue-600 bg-blue-50 shadow-md scale-105'
-                                : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
-                                }`}
+                            onClick={() => onSymptomToggle(symptomKey)}
+                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
                         >
-                            <div className="flex flex-col items-center gap-2">
-                                <div className={`p-3 rounded-full ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
-                                    }`}>
-                                    <Icon className="w-6 h-6" />
-                                </div>
-                                <span className={`text-sm ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
-                                    {symptom.name}
-                                </span>
+                            <div className={`p-2 rounded-full ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                                <Icon className="w-5 h-5" />
                             </div>
+                            <span className="text-sm font-medium text-gray-700">{symptom.name}</span>
                         </button>
                     );
                 })}

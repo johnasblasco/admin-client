@@ -1,84 +1,59 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Activity, TrendingDown, PlusCircle } from 'lucide-react';
 import { StudentProfile } from './StudentProfile';
 import { MyReports } from './MyReports';
 import { HealthTips } from './HealthTips';
 import { StudentReportForm } from './StudentReportForm';
+import { api } from '@/services/api';
 import type { HealthReport } from '@/types/index';
 
 export default function StudentDashboard() {
     const [showReportForm, setShowReportForm] = useState(false);
-    const [studentReports, setStudentReports] = useState<HealthReport[]>([
-        // Mock initial reports
-        {
-            id: '1',
-            userId: 'user-123',
-            userGradeLevel: 'Grade 10',
-            symptoms: ['fever', 'cough'],
-            severity: 'moderate',
-            dateOfOnset: '2024-03-10T10:00:00Z',
-            confirmedDisease: false,
-            location: {
-                building: 'Main Building',
-                room: '201',
-                seatNumber: 'A12',
-            },
-            timestamp: '2024-03-10T10:00:00Z',
-            status: 'pending',
-        },
-        {
-            id: '2',
-            userId: 'user-123',
-            userGradeLevel: 'Grade 10',
-            symptoms: ['headache'],
-            severity: 'mild',
-            dateOfOnset: '2024-03-08T09:00:00Z',
-            confirmedDisease: false,
-            location: {
-                building: 'Science Building',
-                room: '105',
-                seatNumber: 'B7',
-            },
-            timestamp: '2024-03-08T09:00:00Z',
-            status: 'resolved',
-        },
-    ]);
+    const [studentReports, setStudentReports] = useState<HealthReport[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Mock student data
-    const student = {
-        name: 'Alex Johnson',
-        email: 'alex.johnson@school.edu',
-        gradeLevel: 'Grade 10',
-        studentId: 'STU-2024-1234',
-        defaultLocation: {
-            building: 'Main Building',
-            room: '201',
-            seatNumber: 'A12',
-        },
+    // 1. Get logged-in user info (saved during Login)
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    // 2. Fetch real report history from backend
+    const fetchReports = async () => {
+        try {
+            setLoading(true);
+            const data = await api.reports.getMyHistory();
+            setStudentReports(data);
+        } catch (error) {
+            console.error("Failed to load history", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
+    // Load data on mount
+    useEffect(() => {
+        fetchReports();
+    }, []);
 
-    const handleSubmitReport = (reportData: Omit<HealthReport, 'id' | 'userId' | 'timestamp' | 'status'>) => {
-        const newReport: HealthReport = {
-            ...reportData,
-            id: `report-${Date.now()}`,
-            userId: 'user-123',
-            timestamp: new Date().toISOString(),
-            status: 'pending',
-        };
-
-        setStudentReports(prev => [...prev, newReport]);
-        // No setShowReportForm here - let the form handle it
+    // 3. Callback to refresh list after successful submission
+    const handleReportSuccess = () => {
+        setShowReportForm(false);
+        fetchReports(); // Re-fetch from server to get the new report with server-generated ID/Timestamp
     };
 
-
-
-    // Calculate stats
+    // Calculate real stats
     const pendingReports = studentReports.filter(r => r.status === 'pending').length;
-    const reviewedReports = studentReports.filter(r => r.status === 'reviewed').length;
+    const reviewedReports = studentReports.filter(r => r.status === 'reviewed' || r.status === 'investigating').length;
     const resolvedReports = studentReports.filter(r => r.status === 'resolved').length;
 
-    // If showing report form, display it as a separate "page"
+    // Build profile object from session data
+    const studentProfileData = {
+        name: user.fullName || user.email?.split('@')[0] || 'Student',
+        email: user.email || '',
+        gradeLevel: 'Grade 10', // You can update your User schema to store this later
+        studentId: user.id ? `ID-${user.id.substring(0, 6).toUpperCase()}` : 'ID-PENDING',
+        defaultLocation: undefined
+    };
+
+    // --- RENDER: Report Form Page ---
     if (showReportForm) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
@@ -93,7 +68,6 @@ export default function StudentDashboard() {
                             Back to Dashboard
                         </button>
 
-                        {/* Page Header */}
                         <div>
                             <h1 className="text-3xl text-gray-900 mb-2">New Health Report</h1>
                             <p className="text-gray-600">
@@ -102,10 +76,10 @@ export default function StudentDashboard() {
                         </div>
                     </div>
 
-                    {/* Report Form */}
+                    {/* Report Form Component */}
                     <StudentReportForm
-                        onSubmitReport={handleSubmitReport}
-                        onClose={() => setShowReportForm(false)} // Add this
+                        onSuccess={handleReportSuccess}
+                        onClose={() => setShowReportForm(false)}
                     />
 
                     {/* Additional Info */}
@@ -128,14 +102,16 @@ export default function StudentDashboard() {
         );
     }
 
-    // Main Dashboard View
+    // --- RENDER: Main Dashboard ---
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
             <div className="max-w-7xl mx-auto p-6 space-y-6">
-                {/* Welcome Header with New Report Button */}
+                {/* Welcome Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl text-gray-900 mb-2">Welcome back, {student.name.split(' ')[0]}! 👋</h1>
+                        <h1 className="text-3xl text-gray-900 mb-2">
+                            Welcome back, {studentProfileData.name.split(' ')[0]}! 👋
+                        </h1>
                         <p className="text-gray-600">Track your health and stay informed</p>
                     </div>
                     <button
@@ -148,7 +124,7 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Profile Section */}
-                <StudentProfile student={student} />
+                <StudentProfile student={studentProfileData} />
 
                 {/* Stats Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -221,7 +197,14 @@ export default function StudentDashboard() {
 
                 {/* My Reports Section */}
                 <div id="my-reports">
-                    <MyReports reports={studentReports} />
+                    {loading ? (
+                        <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
+                            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <p className="text-gray-500 text-sm">Loading your history...</p>
+                        </div>
+                    ) : (
+                        <MyReports reports={studentReports} />
+                    )}
                 </div>
 
                 {/* Health Tips */}

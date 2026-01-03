@@ -6,6 +6,8 @@ interface MyReportsProps {
 }
 
 export function MyReports({ reports }: MyReportsProps) {
+
+    // FIX: Added default case to prevent undefined class names
     const getSeverityColor = (severity: HealthReport['severity']) => {
         switch (severity) {
             case 'severe':
@@ -14,22 +16,27 @@ export function MyReports({ reports }: MyReportsProps) {
                 return 'bg-orange-100 text-orange-700 border-orange-200';
             case 'mild':
                 return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+            default:
+                return 'bg-gray-100 text-gray-700 border-gray-200';
         }
     };
 
+    // FIX: Added default case to prevent crash when status is unknown
     const getStatusConfig = (status: HealthReport['status']) => {
         switch (status) {
             case 'resolved':
                 return { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50', label: 'Resolved' };
             case 'reviewed':
+            case 'investigating': // Handle variations
                 return { icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Under Review' };
             case 'pending':
+            default:
                 return { icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-50', label: 'Pending Review' };
         }
     };
 
     const sortedReports = [...reports].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        (a, b) => new Date(b.timestamp || b.dateOfOnset).getTime() - new Date(a.timestamp || a.dateOfOnset).getTime()
     );
 
     return (
@@ -55,6 +62,7 @@ export function MyReports({ reports }: MyReportsProps) {
             ) : (
                 <div className="space-y-3">
                     {sortedReports.map((report) => {
+                        // Safe because getStatusConfig now always returns an object
                         const status = getStatusConfig(report.status);
                         const StatusIcon = status.icon;
 
@@ -96,9 +104,14 @@ export function MyReports({ reports }: MyReportsProps) {
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <MapPin className="w-4 h-4" />
-                                                        <span>
-                                                            {report.location.building} - Room {report.location.room} - Seat {report.location.seatNumber}
-                                                        </span>
+                                                        {/* FIX: Safe Access for Location */}
+                                                        {report.location ? (
+                                                            <span>
+                                                                {report.location.building} - Room {report.location.room} - Seat {report.location.seatNumber}
+                                                            </span>
+                                                        ) : (
+                                                            <span>Location info unavailable</span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -130,7 +143,7 @@ export function MyReports({ reports }: MyReportsProps) {
                                         {/* Footer */}
                                         <div className="pt-3 border-t border-gray-200">
                                             <span className="text-xs text-gray-500">
-                                                Submitted: {new Date(report.timestamp).toLocaleString()}
+                                                Submitted: {new Date(report.timestamp || report.dateOfOnset).toLocaleString()}
                                             </span>
                                         </div>
                                     </div>

@@ -115,7 +115,7 @@ function Login() {
                                     {userRole === 'admin' ? <Shield className="w-6 h-6 text-white" /> : <Heart className="w-6 h-6 text-white" />}
                                 </div>
                                 <div>
-                                    <h1 className="text-xl text-gray-900">HealthGuard AI</h1>
+                                    <h1 className="text-xl text-gray-900">SickSense</h1>
                                     <p className="text-xs text-gray-500">
                                         {userRole === 'student' ? 'Student Portal' : 'Admin Dashboard'}
                                     </p>
@@ -369,7 +369,7 @@ function Login() {
                                 <div className="p-3 bg-white rounded-xl">
                                     <Heart className="w-10 h-10 text-blue-600" />
                                 </div>
-                                <h1 className="text-4xl text-white">HealthGuard AI</h1>
+                                <h1 className="text-4xl text-white">SickSense</h1>
                             </div>
                             <p className="text-xl text-blue-100">
                                 Intelligent Health Monitoring & Outbreak Prediction System

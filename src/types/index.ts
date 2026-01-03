@@ -5,11 +5,19 @@ export type UserRole = 'student' | 'admin';
 export type SeverityLevel = 'mild' | 'moderate' | 'severe';
 
 export interface Symptom {
+    key: any;
     id: string;
     name: string;
     category: 'respiratory' | 'digestive' | 'general' | 'other';
     icon: string;
 }
+
+
+export type CreateHealthReport = Omit<
+    HealthReport,
+    'id' | 'userId' | 'studentHashedId' | 'timestamp' | 'status'
+>;
+
 
 export interface HealthReport {
     studentHashedId: any

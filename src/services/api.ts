@@ -12,6 +12,7 @@ import type {
 
 // 1. Configuration
 const API_URL = 'http://localhost:5000/api';
+import type { CreateHealthReport } from '@/types/index'
 
 // 2. Generic Request Handler (Handles errors & JSON parsing automatically)
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -37,7 +38,7 @@ export const api = {
     // --- Student Features ---
     reports: {
         /** Submit a new sickness report */
-        submit: (data: Omit<HealthReport, 'id' | 'userId' | 'timestamp' | 'status'>) =>
+        submit: (data: CreateHealthReport) =>
             request<HealthReport>('/reports', {
                 method: 'POST',
                 body: JSON.stringify(data),
